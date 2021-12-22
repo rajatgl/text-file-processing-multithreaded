@@ -4,6 +4,8 @@ import java.io.File;
 import java.io.FileWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
+import java.util.concurrent.Future;
 
 public class CommonUtil {
 
@@ -39,5 +41,61 @@ public class CommonUtil {
             return false;
         }
         return true;
+    }
+
+    /**
+     *
+     * @param tasks
+     */
+    public static void await(List<Future<Boolean>> tasks) {
+        tasks.forEach(task -> {
+            try{
+//                PerformanceUtil.startTimer();
+                task.get();
+//                PerformanceUtil.printTimeTaken();
+            }
+            catch (Exception ignored) {}
+        });
+    }
+
+    public static String fileWeaver(String[] words, String[] nonWords){
+
+        int i=0,j=0;
+        if(words[0].isEmpty())
+            i++;
+
+        StringBuilder fileContent = new StringBuilder();
+
+        //start the stitch with a non-word
+        boolean turn = false;
+
+        //alternatingly iterate through both word and nonWord arrays to construct whole file content
+        while (i<words.length || j<nonWords.length ){
+            if(turn){
+                if(i>=words.length) {
+                    turn = false;
+                    continue;
+                }
+                fileContent.append(words[i]);
+                i++;
+            }
+            else {
+                if(j>=words.length) {
+                    turn = true;
+                    continue;
+                }
+                fileContent.append(nonWords[j]);
+                j++;
+            }
+            turn = !turn;
+        }
+        return fileContent.toString();
+    }
+
+    public static void prettyPrint(String message) {
+
+        System.out.println("--------------------------------------------------------------------");
+        System.out.println(message);
+        System.out.println("--------------------------------------------------------------------");
     }
 }

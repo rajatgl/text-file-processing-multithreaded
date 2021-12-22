@@ -1,6 +1,7 @@
 package org.headstrait.texteditor.service;
 
 import org.headstrait.texteditor.constants.FilePaths;
+import org.headstrait.texteditor.model.Metadata;
 import org.headstrait.texteditor.util.CommonUtil;
 
 import java.io.File;
@@ -9,75 +10,90 @@ import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class FileProcessor {
-    /**
-     * @param mapOfWords to be referenced during processing.
-     */
-    public void processFile(Map<String, String> mapOfWords){
+import static org.headstrait.texteditor.util.CommonUtil.fileWeaver;
 
-        File[] files;
+public class FileProcessor {
+
+    private final Map<String, String> mapOfWords;
+
+    public FileProcessor(Map<String, String> mapOfWords) {
+        this.mapOfWords = mapOfWords;
+    }
+
+    public Boolean processFile(File file) {
+
         FileReader fileReader;
         String fileContent;
-        FileReProcessor fileReProcessor = new FileReProcessor();
 
         Path processedFolder = Paths.get(FilePaths.PROCESSED_FOLDER);
-        //create directory to store processed files
-        if(CommonUtil.createDirectory(processedFolder)){
-            System.out.println(processedFolder.getFileName()+"folder created at: "
-                    +processedFolder);
-        }
 
-        try {
-            //array of files in TEXT_FOLDER
-            files = new File(FilePaths.TEXT_FOLDER).listFiles();
-            assert files != null;
+        Thread thread = Thread.currentThread();
+        System.out.println("Thread: "+thread.getName()+" Processing file: " + file.getAbsolutePath());
+        fileReader = new FileReader(Paths.get(file.getAbsolutePath()));
+        fileContent = fileReader.getFileContent();
+//        System.out.println("File content: " + fileContent);
 
-            for (File file: files) {
-                System.out.println("Fetching file: "+file.getAbsolutePath());
-                fileReader = new FileReader(Paths.get(file.getAbsolutePath()));
-                fileContent = fileReader.getFileContent();
-                System.out.println("File content: "+fileContent);
+        Set<String> words = mapOfWords.keySet();
 
-                Set<String> words = mapOfWords.keySet();
+        HashMap<String, List<Integer>> wordPositionsMap = new HashMap<>();
+        AtomicInteger count = new AtomicInteger();
 
-                HashMap<String, List<Integer>> wordHash = new HashMap<>();
-                AtomicInteger count = new AtomicInteger();
-
-                //update the word-positions for each hashMap entry.
-                //split by non-word chars
-                Arrays.stream(fileContent.split("\\W+"))
-                        .forEach(
-                        word->{
-                            if(words.contains(word)){
-                                if(!wordHash.containsKey(word)){
-                                    wordHash.put(word,new ArrayList<>());
+        //update the word-positions for each hashMap entry.
+        //split by non-word chars
+        Arrays.stream(fileContent.split("\\W+"))
+                .forEach(
+                        fileWord -> {
+                            if (words.contains(fileWord)) {
+                                if (!wordPositionsMap.containsKey(fileWord)) {
+                                    wordPositionsMap.put(fileWord, new ArrayList<>());
                                 }
-                                wordHash.get(word).add(count.get());
+                                wordPositionsMap.get(fileWord).add(count.get());
                             }
                             count.getAndIncrement();
                         }
                 );
+        Metadata.setMetaData(file.getName(),wordPositionsMap);
 
-                //replace all whole words in text file with required substitute.
-                for (String word: words) {
-                      fileContent = fileContent
-                              .replaceAll("\\b"+word+"\\b",
-                                      mapOfWords.get(word));
-                }
-                System.out.println("New File content: "
-                        + fileContent + ", Changed Words Indices: "
-                        + wordHash);
+        String nonWordPattern = "\\W+";
+        String wordPattern = "\\w+";
+        String[] fileContentWords = fileContent.split(nonWordPattern);
+        String[] fileContentNonWords = fileContent.split(wordPattern);
 
-                //create new file with updated content.
-                CommonUtil.createFile(
-                        Paths
-                        .get(processedFolder+"/"+file.getName()),
-                        fileContent
-                );
-                fileReProcessor.reProcessFile(wordHash, file.toPath());
+        //replace words in file with provided substitute
+//        mapOfWords.forEach((word,substitute)->{
+//            for (int i = 0; i<fileContentWords.length;i++){
+//                if(Objects.equals(fileContentWords[i], word))
+//                    fileContentWords[i]=substitute;
+//            }
+//        });
+
+        //optimized
+        for(int i = 0; i<fileContentWords.length;i++){
+            String fileWord = fileContentWords[i];
+            if(mapOfWords.containsKey(fileWord)){
+                fileContentWords[i] = mapOfWords.get(fileWord);
             }
-        }catch (Exception exception){
-            exception.printStackTrace();
         }
+
+        fileContent = fileWeaver(fileContentWords,fileContentNonWords);
+
+        //replace all whole words in text file with required substitute.
+//        for (String word : words) {
+//            fileContent = fileContent
+//                    .replaceAll("\\b" + word + "\\b",
+//                            mapOfWords.get(word));
+//        }
+//        System.out.println("New File content: "
+//                + fileContent + ", Changed Words Indices: "
+//                + wordPositionsMap);
+        //for keeping track of thread processing
+        System.out.println("Processed: "+file.getName());
+
+        //create new file with updated content.
+        return CommonUtil.createFile(
+                Paths
+                        .get(processedFolder + "/" + file.getName()),
+                fileContent
+        );
     }
 }

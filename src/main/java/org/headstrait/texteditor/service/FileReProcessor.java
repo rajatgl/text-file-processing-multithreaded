@@ -1,31 +1,33 @@
 package org.headstrait.texteditor.service;
 
 import org.headstrait.texteditor.constants.FilePaths;
+import org.headstrait.texteditor.model.Metadata;
 import org.headstrait.texteditor.util.CommonUtil;
 
-import java.nio.file.Path;
+import java.io.File;
 import java.nio.file.Paths;
-import java.util.HashMap;
-import java.util.List;
+
+import static org.headstrait.texteditor.util.CommonUtil.fileWeaver;
 
 
 public class FileReProcessor {
     /**
-     * @param wordHash hashMap of word and list of positions at with it is replaced.
-     * @param sourceFilePath of the file being re-processed.
+     * @param sourceFile of the file being re-processed.
      */
-    public void reProcessFile(HashMap<String, List<Integer>> wordHash,
-                           Path sourceFilePath) {
-        FileReader fileReader = new FileReader(sourceFilePath);
+    public Boolean reProcessFile(File sourceFile) {
+
+        Thread thread = Thread.currentThread();
+        System.out.println("Thread: "+thread.getName()+" Reprocessing file: " + sourceFile.getAbsolutePath());
+        FileReader fileReader = new FileReader(sourceFile.toPath());
         String processedFileContent = fileReader.getFileContent();
 
         String nonWordPattern = "\\W+";
-        String wordPattern = "[a-zA-Z]+";
+        String wordPattern = "\\w+";
         String[] processedWords = processedFileContent.split(nonWordPattern);
         String[] processedNonWords = processedFileContent.split(wordPattern);
 
         //update processedWords array only at required positions for each hash entries.
-        wordHash.forEach(
+        Metadata.getPositionMap(sourceFile.getName()).forEach(
                 (word,positions) ->{
                     for (int position:
                          positions) {
@@ -34,45 +36,17 @@ public class FileReProcessor {
                 }
         );
 
-        int i=0,j=0;
-        if(processedWords[0].isEmpty())
-            i++;
-
-        StringBuilder reprocessedFileContent = new StringBuilder();
-
-        //firstChar logic not needed, always begin with a nonWord
-//        char firstChar = processedFileContent.charAt(0);
-//        boolean turn = firstChar >= 'a' && firstChar <= 'z' || firstChar >= 'A' && firstChar <= 'Z';
-
-        boolean turn = false;
-
-        //alternatingly iterate through both word and nonWord arrays to construct whole file content
-        while (i<processedWords.length || j<processedNonWords.length ){
-            if(turn){
-                if(i>=processedWords.length) {
-                    turn = false;
-                    continue;
-                }
-                reprocessedFileContent.append(processedWords[i]);
-                i++;
-            }
-            else {
-                if(j>=processedNonWords.length) {
-                    turn = true;
-                    continue;
-                }
-                reprocessedFileContent.append(processedNonWords[j]);
-                j++;
-            }
-            turn = !turn;
-        }
+        String reProcessedFileContent = fileWeaver(processedWords,processedNonWords);
 
         //create a directory to store re-processed files.
         CommonUtil.createDirectory(Paths.get(FilePaths.REPROCESSED_FOLDER));
 
+
+        System.out.println("ReProcessed: "+sourceFile.getName());
+
         //create a new file with re-processed content.
-        CommonUtil.createFile(Paths.get(FilePaths.REPROCESSED_FOLDER+ "/"
-                        + sourceFilePath.getFileName().toString()),
-                reprocessedFileContent.toString());
+        return CommonUtil.createFile(Paths.get(FilePaths.REPROCESSED_FOLDER+ "/"
+                        + sourceFile.getName()),
+                reProcessedFileContent);
     }
 }
