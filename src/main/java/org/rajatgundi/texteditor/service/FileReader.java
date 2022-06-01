@@ -20,7 +20,7 @@ public class FileReader {
         try {
             fileContent = Files.readString(filePath, ISO_8859_1);
         } catch (Exception exception) {
-            exception.printStackTrace();
+            System.out.println(exception.getMessage());
         }
     }
 

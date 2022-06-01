@@ -58,6 +58,12 @@ public class CommonUtil {
         });
     }
 
+    /**
+     *
+     * @param words array of strings in file content
+     * @param nonWords array of non-words in file content
+     * @return resultant file content after the union of words and nonWords
+     */
     public static String fileWeaver(String[] words, String[] nonWords){
 
         int i=0,j=0;
@@ -69,7 +75,7 @@ public class CommonUtil {
         //start the stitch with a non-word
         boolean turn = false;
 
-        //alternatingly iterate through both word and nonWord arrays to construct whole file content
+        //alternately iterate through both word and nonWord arrays to construct whole file content
         while (i<words.length || j<nonWords.length ){
             if(turn){
                 if(i>=words.length) {
@@ -92,8 +98,11 @@ public class CommonUtil {
         return fileContent.toString();
     }
 
+    /**
+     *
+     * @param message to be printed.
+     */
     public static void prettyPrint(String message) {
-
         System.out.println("--------------------------------------------------------------------");
         System.out.println(message);
         System.out.println("--------------------------------------------------------------------");

@@ -29,8 +29,10 @@ public class FileProcessor {
 
         Thread thread = Thread.currentThread();
         System.out.println("Thread: "+thread.getName()+" Processing file: " + file.getAbsolutePath());
+
         fileReader = new FileReader(Paths.get(file.getAbsolutePath()));
         fileContent = fileReader.getFileContent();
+
 //        System.out.println("File content: " + fileContent);
 
         Set<String> words = mapOfWords.keySet();
